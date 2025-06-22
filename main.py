@@ -1,5 +1,6 @@
 # main.py
 import os # env interacting tools
+import sys # get access to cli
 from dotenv import load_dotenv # tool to read .env files
 from google import genai # get google generative ai tools
 
@@ -12,7 +13,12 @@ client = genai.Client(api_key=api_key)
 
 # send gen AI request
 model = "gemini-2.0-flash-001"
-prompt = "Why is Boot.dev such a great place to learn backend development? Use one paragraph maximum."
+
+# check if CLI prompt arg provided
+if len(sys.argv) <= 1:
+    print("Please provide a prompt as an argument.") # log message
+    sys.exit(1) # error code 1 to mean CLI failure
+prompt = sys.argv[1] # use CLI input arg
 
 GeminiResp = client.models.generate_content(
     model=model, # version of gemini
