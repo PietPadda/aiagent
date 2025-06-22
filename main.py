@@ -3,6 +3,7 @@ import os # env interacting tools
 import sys # get access to cli
 from dotenv import load_dotenv # tool to read .env files
 from google import genai # get google generative ai tools
+from google.genai import types # for prompt roles
 
 # Get env vars
 load_dotenv() # read the .env file
@@ -18,11 +19,17 @@ model = "gemini-2.0-flash-001"
 if len(sys.argv) <= 1:
     print("Please provide a prompt as an argument.") # log message
     sys.exit(1) # error code 1 to mean CLI failure
-prompt = sys.argv[1] # use CLI input arg
+user_prompt = sys.argv[1] # use CLI input arg
 
+# our message list
+messages = [
+    types.Content(role="user", parts=[types.Part(text=user_prompt)]),
+] # user role, prompt arg only
+
+# generate a response from Gemini
 GeminiResp = client.models.generate_content(
     model=model, # version of gemini
-    contents=prompt, # our prompt to AI
+    contents=messages, # our messages to AI
 )
 
 # get response fields
