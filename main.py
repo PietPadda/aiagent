@@ -16,7 +16,7 @@ client = genai.Client(api_key=api_key)
 model = "gemini-2.0-flash-001"
 
 # check if CLI prompt arg provided
-if len(sys.argv) <= 1:
+if len(sys.argv) < 2:
     print("Please provide a prompt as an argument.") # log message
     sys.exit(1) # error code 1 to mean CLI failure
 user_prompt = sys.argv[1] # use CLI input arg
@@ -38,6 +38,12 @@ GeminiPromptTokens = GeminiResp.usage_metadata.prompt_token_count
 GeminiResponseTokens = GeminiResp.usage_metadata.candidates_token_count
 
 # print response with token usage
-print(GeminiResp.text) # print the gen ai response
-print(f"Prompt tokens: {GeminiPromptTokens}") # tokens in the prompt
-print(f"Response tokens: {GeminiResponseTokens}") # tokens in the response
+if len(sys.argv) > 2 and sys.argv[2] == "--verbose":
+    # do a verbose output with msg and tokens
+    print(GeminiResp.text) # print the gen ai response
+    print(f"User prompt: {user_prompt}") # print the user prompt
+    print(f"Prompt tokens: {GeminiPromptTokens}") # tokens in the prompt
+    print(f"Response tokens: {GeminiResponseTokens}") # tokens in the response
+else:
+    # print only the general message
+    print(GeminiResp.text) # print the gen ai response
