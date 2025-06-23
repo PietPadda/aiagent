@@ -3,42 +3,44 @@
 class Calculator:
     def __init__(self):
         self.operators = {
-            "+": lambda a, b: a + b,
-            "-": lambda a, b: a - b,
-            "*": lambda a, b: a * b,
-            "/": lambda a, b: a / b,
+            "+": lambda a, b: a + b, # add
+            "-": lambda a, b: a - b, # subtract
+            "*": lambda a, b: a * b, # multiply
+            "/": lambda a, b: a / b, # divide
         }
         self.precedence = {
-            "+": 1,
-            "-": 1,
-            "*": 2,
-            "/": 2,
+            "+": 1, # + gets less precedence
+            "-": 1, # - gets less precedence
+            "*": 2, # * gets more precedence
+            "/": 2, # * gets more precedence
         }
 
     def evaluate(self, expression):
         if not expression or expression.isspace():
-            return None
-        tokens = expression.strip().split()
-        return self._evaluate_infix(tokens)
+            return None # None if no input or just a space
+        tokens = expression.strip().split() # strip white space and get list
+        return self._evaluate_infix(tokens) # pass list to eval
 
     def _evaluate_infix(self, tokens):
-        values = []
-        operators = []
+        values = [] # init empty value list
+        operators = [] # init empty operators list
 
-        for token in tokens:
-            if token in self.operators:
+        for token in tokens: # check each token in tokens list
+            if token in self.operators: # if a token is an self.operators (+ - * /)
+                # stack while loop
                 while (
-                    operators
-                    and operators[-1] in self.operators
-                    and self.precedence[operators[-1]] >= self.precedence[token]
+                    operators # is there an operator currently?
+                    and operators[-1] in self.operators # check top of stack operator
+                    and self.precedence[operators[-1]] >= self.precedence[token] # does top stack op have greater prec than current token
+                    # operators operate in correct precedence order
                 ):
-                    self._apply_operator(operators, values)
-                operators.append(token)
-            else:
+                    self._apply_operator(operators, values) # includes popping off stack
+                operators.append(token) # add new token to operators and repeat
+            else: # not an operator?
                 try:
-                    values.append(float(token))
+                    values.append(float(token)) # add to the values list as a float
                 except ValueError:
-                    raise ValueError(f"invalid token: {token}")
+                    raise ValueError(f"invalid token: {token}") # or error if invalid!
 
         while operators:
             self._apply_operator(operators, values)
