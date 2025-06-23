@@ -12,7 +12,7 @@ def get_file_content(working_directory, file_path):
     
     # check if file in working dir
     if not abs_file_path.startswith(abs_working_directory):
-        # dir not in working dir str to LLM
+        # file not in working dir str to LLM
         return f'Error: Cannot read "{file_path}" as it is outside the permitted working directory'
     
     # check if file is a file

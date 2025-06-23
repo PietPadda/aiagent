@@ -1,13 +1,13 @@
 # tests.py
 
-from functions.get_file_content import get_file_content
+from functions.write_file import write_file
 
 
 # do all function calls for testing with direct execution in the main guard
 if __name__ == "__main__":
-    result = get_file_content("calculator", "main.py")
-    print(f"main.py:\n{result}\n") # print to console
-    result = get_file_content("calculator", "pkg/calculator.py")
-    print(f"pkg/calculator.py:\n{result}\n") # print to console
-    result = get_file_content("calculator", "/bin/cat")
-    print(f"/bin/cat:\n{result}\n") # print to console
+    result = write_file("calculator", "lorem.txt", "wait, this isn't lorem ipsum")
+    print(f"lorem.txt:\n{result}\n") # print to console
+    result = write_file("calculator", "pkg/morelorem.txt", "lorem ipsum dolor sit amet")
+    print(f"pkg/morelorem.txt:\n{result}\n") # print to console
+    result = write_file("calculator", "/tmp/temp.txt", "this should not be allowed")
+    print(f"/tmp/temp.txt:\n{result}\n") # print to console
