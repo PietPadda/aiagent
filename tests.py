@@ -1,15 +1,13 @@
 # tests.py
 
-from functions.get_files_info import get_files_info 
+from functions.get_file_content import get_file_content
 
 
 # do all function calls for testing with direct execution in the main guard
 if __name__ == "__main__":
-    result = get_files_info("calculator", ".") # get all in the calculator dir
-    print(result) # print to console
-    result = get_files_info("calculator", "pkg") # get all in the pkg subfolder
-    print(result) # print to console
-    result = get_files_info("calculator", "/bin") # should err as /bin is an absolute path not in calc dir
-    print(result) # print to console
-    result = get_files_info("calculator", "../") # should err as prev dir is not inside calculator dir
-    print(result) # print to console
+    result = get_file_content("calculator", "main.py")
+    print(f"main.py:\n{result}\n") # print to console
+    result = get_file_content("calculator", "pkg/calculator.py")
+    print(f"pkg/calculator.py:\n{result}\n") # print to console
+    result = get_file_content("calculator", "/bin/cat")
+    print(f"/bin/cat:\n{result}\n") # print to console
