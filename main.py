@@ -26,24 +26,71 @@ messages = [
     types.Content(role="user", parts=[types.Part(text=user_prompt)]),
 ] # user role, prompt arg only
 
+# hardcoded system prompt
+system_prompt = """
+You are a helpful AI coding agent.
+
+When a user asks a question or makes a request, make a function call plan. You can perform the following operations:
+
+- List files and directories
+
+All paths you provide should be relative to the working directory. You do not need to specify the working directory in your function calls as it is automatically injected for security reasons.
+"""
+
+# get_files_info schema function declaration
+schema_get_files_info = types.FunctionDeclaration( # func blueprint we store in a var
+    name="get_files_info", # func name as LLM sees it
+    description="Lists files in the specified directory along with their sizes, constrained to the working directory.", # func description LLM sees
+    parameters=types.Schema( # defines params the LLM needs
+        type=types.Type.OBJECT, # provide func as object (like dict) to LLM
+        properties={ # key-value pairs of object parameter
+            "directory": types.Schema( # define directory parameter
+                type=types.Type.STRING, # store value of "directory" as a string
+                description="The directory to list files from, relative to the working directory. If not provided, lists files in the working directory itself.", # tells LLM what type of string is expected
+            ),
+        },
+    ),
+)
+
+# functions available to LLM
+available_functions = types.Tool( # we provide the "tool"s for the LLM
+    function_declarations=[ # list of func decls
+        schema_get_files_info, # function
+    ]
+)
+
 # generate a response from Gemini
 GeminiResp = client.models.generate_content(
     model=model, # version of gemini
     contents=messages, # our messages to AI
+    config=types.GenerateContentConfig( # system config
+        tools=[available_functions], # funcs as tools for LLM
+        system_instruction=system_prompt # hardcoded system prompt on how do do things
+        ),
 )
 
-# get response fields
-GeminiText = GeminiResp.text
+# get gemini response most likely candidate response content
+content = GeminiResp.candidates[0].content
+
+# loop through each part of the most likely response content
+for part in content.parts:
+    if part.function_call:  # check if func call
+        # get name and args of func call
+        func_name = part.function_call.name # func called name
+        func_args = part.function_call.args # args passed to func called
+
+        # print the function call
+        print(f"Calling function: {func_name}({func_args})")
+    elif part.text: # check if text only
+        print(part.text) # print text only
+
+# token fields
 GeminiPromptTokens = GeminiResp.usage_metadata.prompt_token_count
 GeminiResponseTokens = GeminiResp.usage_metadata.candidates_token_count
 
-# print response with token usage
+# verbose flag to print extra info
 if len(sys.argv) > 2 and sys.argv[2] == "--verbose":
-    # do a verbose output with msg and tokens
-    print(GeminiResp.text) # print the gen ai response
+    # do a verbose output with prompt and tokens
     print(f"User prompt: {user_prompt}") # print the user prompt
     print(f"Prompt tokens: {GeminiPromptTokens}") # tokens in the prompt
     print(f"Response tokens: {GeminiResponseTokens}") # tokens in the response
-else:
-    # print only the general message
-    print(GeminiResp.text) # print the gen ai response
