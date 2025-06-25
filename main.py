@@ -5,6 +5,8 @@ from dotenv import load_dotenv # tool to read .env files
 from google import genai # get google generative ai tools
 from google.genai import types # for prompt roles
 
+from functions.call_function import call_function # for func calling
+
 # Get env vars
 load_dotenv() # read the .env file
 api_key = os.environ.get("GEMINI_API_KEY") # get apikey from .env
@@ -127,25 +129,48 @@ GeminiResp = client.models.generate_content(
 # get gemini response most likely candidate response content
 content = GeminiResp.candidates[0].content
 
+# set verbose flag
+if len(sys.argv) > 2 and sys.argv[2] == "--verbose":
+    verbose_flag = True
+else:
+    verbose_flag = False
+
 # loop through each part of the most likely response content
 for part in content.parts:
     if part.function_call:  # check if func call
-        # get name and args of func call
-        func_name = part.function_call.name # func called name
-        func_args = part.function_call.args # args passed to func called
+        # call the function
+        call_result = call_function(part.function_call, verbose=verbose_flag) # function called
+        response = call_result.parts[0].function_response.response # get result from function called out of the response!
 
-        # print the function call
-        print(f"Calling function: {func_name}({func_args})")
-    elif part.text: # check if text only
-        print(part.text) # print text only
+        # check if func response exists
+        if not response:
+            raise Exception("Function call response missing required structure!")
+        # exists, check verbose flag is true
+        elif verbose_flag: # extract result and error
+            # print result if success else the error! if both? print both!
+            if "result" in response:
+                print(f"-> {response['result']}") # success, result only
+            elif "error" in response:
+                print(f"-> {response['error']}") # failure, error only
+            else:
+                print(f"-> {response}") # result and error! just an edge case
 
-# token fields
-GeminiPromptTokens = GeminiResp.usage_metadata.prompt_token_count
-GeminiResponseTokens = GeminiResp.usage_metadata.candidates_token_count
+            # token fields
+            GeminiPromptTokens = GeminiResp.usage_metadata.prompt_token_count
+            GeminiResponseTokens = GeminiResp.usage_metadata.candidates_token_count
 
-# verbose flag to print extra info
-if len(sys.argv) > 2 and sys.argv[2] == "--verbose":
-    # do a verbose output with prompt and tokens
-    print(f"User prompt: {user_prompt}") # print the user prompt
-    print(f"Prompt tokens: {GeminiPromptTokens}") # tokens in the prompt
-    print(f"Response tokens: {GeminiResponseTokens}") # tokens in the response
+            # do a verbose output with prompt and tokens
+            print(f"User prompt: {user_prompt}") # print the user prompt
+            print(f"Prompt tokens: {GeminiPromptTokens}") # tokens in the prompt
+            print(f"Response tokens: {GeminiResponseTokens}") # tokens in the response
+        else: # exists, verbose flag false
+           # print result if success else the error! if both? print both!
+            if "result" in response:
+                print(response['result']) # success, result only
+            elif "error" in response:
+                print(response['error']) # failure, error only
+            else:
+                print({response}) # result and error! just an edge case
+
+    elif part.text: # just the plain text response
+        print(part.text) # print result only

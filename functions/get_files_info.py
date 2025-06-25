@@ -41,6 +41,6 @@ def get_files_info(working_directory, directory=None):
     # build content string using the list of file_strings
     contents_string = "\n".join(contents)
 
-    return contents_string
+    return f"Contents of {directory}:\n{contents_string}"
 
 
