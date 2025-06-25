@@ -33,6 +33,9 @@ You are a helpful AI coding agent.
 When a user asks a question or makes a request, make a function call plan. You can perform the following operations:
 
 - List files and directories
+- Read file contents
+- Execute Python files with optional arguments
+- Write or overwrite files
 
 All paths you provide should be relative to the working directory. You do not need to specify the working directory in your function calls as it is automatically injected for security reasons.
 """
@@ -52,10 +55,62 @@ schema_get_files_info = types.FunctionDeclaration( # func blueprint we store in 
     ),
 )
 
+# get_file_content schema function declaration
+schema_get_file_content = types.FunctionDeclaration( # func blueprint we store in a var
+    name="get_file_content", # func name as LLM sees it
+    description="Reads file contents in the specified file path, constrained to the working directory.", # func description LLM sees
+    parameters=types.Schema( # defines params the LLM needs
+        type=types.Type.OBJECT, # provide func as object (like dict) to LLM
+        properties={ # key-value pairs of object parameter
+            "file_path": types.Schema( # define file_path parameter
+                type=types.Type.STRING, # store value of "file_path" as a string
+                description="The file path to file to read contents from, relative to the working directory", # tells LLM what type of string is expected
+            ),
+        },
+    ),
+)
+
+# write_file schema function declaration
+schema_write_file = types.FunctionDeclaration( # func blueprint we store in a var
+    name="write_file", # func name as LLM sees it
+    description="Write or overwrite file content in the specified file path, constrained to the working directory.", # func description LLM sees
+    parameters=types.Schema( # defines params the LLM needs
+        type=types.Type.OBJECT, # provide func as object (like dict) to LLM
+        properties={ # key-value pairs of object parameter
+            "file_path": types.Schema( # define file_path parameter
+                type=types.Type.STRING, # store value of "file_path" as a string
+                description="The file path to file to write content to, relative to the working directory", # tells LLM what type of string is expected
+            ),
+            "content": types.Schema( # define content parameter
+                type=types.Type.STRING, # store value of "content" as a string
+                description="The content to write to the file at the file path", # tells LLM what type of string is expected
+            ),
+        },
+    ),
+)
+
+# run_python_file schema function declaration
+schema_run_python_file = types.FunctionDeclaration( # func blueprint we store in a var
+    name="run_python_file", # func name as LLM sees it
+    description="Run python file at the specified file path using subprocess.run, constrained to the working directory.", # func description LLM sees
+    parameters=types.Schema( # defines params the LLM needs
+        type=types.Type.OBJECT, # provide func as object (like dict) to LLM
+        properties={ # key-value pairs of object parameter
+            "file_path": types.Schema( # define file_path parameter
+                type=types.Type.STRING, # store value of "file_path" as a string
+                description="The file path to file to run python code using subprocess.run, relative to the working directory", # tells LLM what type of string is expected
+            ),
+        },
+    ),
+)
+
 # functions available to LLM
 available_functions = types.Tool( # we provide the "tool"s for the LLM
     function_declarations=[ # list of func decls
-        schema_get_files_info, # function
+        schema_get_files_info, # dir contents
+        schema_get_file_content, # file content
+        schema_write_file, # edit file
+        schema_run_python_file, # execute file
     ]
 )
 
