@@ -32,14 +32,14 @@ messages = [
 system_prompt = """
 You are a helpful AI coding agent.
 
-When a user asks a question or makes a request, make a function call plan. You can perform the following operations:
+When a user asks a question or makes a request:
 
-- List files and directories
-- Read file contents
-- Execute Python files with optional arguments
-- Write or overwrite files
+1. You must use FUNCTION CALLS to perform any action (listing files, reading, writing, or executing Python files).
+2. When planning, reason in steps and make function calls for each action, even if it is just to gather information.
+3. Only provide an answer, explanation, or summary AFTER all necessary function calls and actions are complete.
+4. Once finished with all tool use, output a brief, clear summary to the user.
 
-All paths you provide should be relative to the working directory. You do not need to specify the working directory in your function calls as it is automatically injected for security reasons.
+All filesystem paths should be relative to the working directory. You do NOT need to specify the working directory argument—it will be set for you automatically.
 """
 
 # get_files_info schema function declaration
@@ -116,37 +116,51 @@ available_functions = types.Tool( # we provide the "tool"s for the LLM
     ]
 )
 
-# generate a response from Gemini
-GeminiResp = client.models.generate_content(
-    model=model, # version of gemini
-    contents=messages, # our messages to AI
-    config=types.GenerateContentConfig( # system config
-        tools=[available_functions], # funcs as tools for LLM
-        system_instruction=system_prompt # hardcoded system prompt on how do do things
-        ),
-)
-
-# get gemini response most likely candidate response content
-content = GeminiResp.candidates[0].content
-
 # set verbose flag
 if len(sys.argv) > 2 and sys.argv[2] == "--verbose":
     verbose_flag = True
 else:
     verbose_flag = False
 
-# loop through each part of the most likely response content
-for part in content.parts:
-    if part.function_call:  # check if func call
-        # call the function
-        call_result = call_function(part.function_call, verbose=verbose_flag) # function called
-        response = call_result.parts[0].function_response.response # get result from function called out of the response!
+# agent feedback loop
+iter_count = 0 # init starting
+iter_max = 20 # we limit to 20 loops
 
-        # check if func response exists
-        if not response:
-            raise Exception("Function call response missing required structure!")
-        # exists, check verbose flag is true
-        elif verbose_flag: # extract result and error
+while iter_count < iter_max:
+    # generate a response from Gemini
+    GeminiResp = client.models.generate_content(
+        model=model, # version of gemini
+        contents=messages, # our messages to AI
+        config=types.GenerateContentConfig( # system config
+            tools=[available_functions], # funcs as tools for LLM
+            system_instruction=system_prompt # hardcoded system prompt on how do do things
+            ),
+    )
+
+    # loop resp candidates and always append to msg history
+    for candidate in GeminiResp.candidates:
+        messages.append(candidate.content) # add content to msg list
+
+    # get gemini response most likely candidate response content
+    content = GeminiResp.candidates[0].content # use first candidate for action
+
+    # flag for function call handling
+    func_call_flag = False # default false each loop
+
+    # loop through each part of the most likely response content
+    for part in content.parts:
+        if part.function_call:  # check if func call
+            func_call_flag = True # set flag to true as it's a function_call!
+
+            # call the function
+            call_result = call_function(part.function_call, verbose=verbose_flag) # function called
+            messages.append(call_result) # append the result to messages list
+            response = call_result.parts[0].function_response.response # get result from function called out of the response!
+
+            # check if func response exists
+            if not response:
+                raise Exception("Function call response missing required structure!")
+            
             # print result if success else the error! if both? print both!
             if "result" in response:
                 print(f"-> {response['result']}") # success, result only
@@ -155,22 +169,26 @@ for part in content.parts:
             else:
                 print(f"-> {response}") # result and error! just an edge case
 
-            # token fields
-            GeminiPromptTokens = GeminiResp.usage_metadata.prompt_token_count
-            GeminiResponseTokens = GeminiResp.usage_metadata.candidates_token_count
+    # after the INNER FOR LOOP
+    # if no func call, break the loop
+    if not func_call_flag:
+        for part in content.parts:
+            if part.text: # just the plain text response
+                print(part.text) # print result only
+        break
 
-            # do a verbose output with prompt and tokens
-            print(f"User prompt: {user_prompt}") # print the user prompt
-            print(f"Prompt tokens: {GeminiPromptTokens}") # tokens in the prompt
-            print(f"Response tokens: {GeminiResponseTokens}") # tokens in the response
-        else: # exists, verbose flag false
-           # print result if success else the error! if both? print both!
-            if "result" in response:
-                print(response['result']) # success, result only
-            elif "error" in response:
-                print(response['error']) # failure, error only
-            else:
-                print({response}) # result and error! just an edge case
+    # check verbose flag is true
+    if verbose_flag: # extract result and error
+        # token fields
+        GeminiPromptTokens = GeminiResp.usage_metadata.prompt_token_count
+        GeminiResponseTokens = GeminiResp.usage_metadata.candidates_token_count
 
-    elif part.text: # just the plain text response
-        print(part.text) # print result only
+        # do a verbose output with prompt and tokens
+        print(f"User prompt: {user_prompt}") # print the user prompt
+        print(f"Prompt tokens: {GeminiPromptTokens}") # tokens in the prompt
+        print(f"Response tokens: {GeminiResponseTokens}") # tokens in the response
+
+    # end of loop, incr
+    iter_count += 1
+
+

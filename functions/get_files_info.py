@@ -2,7 +2,7 @@
 
 import os
 
-def get_files_info(working_directory, directory=None):
+def get_files_info(working_directory, directory=""):
     # construct the directory path
     target_path = os.path.join(working_directory, directory)
 
